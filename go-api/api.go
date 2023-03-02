@@ -3,48 +3,63 @@ package main
 import (
 	"net/http"
 	"encoding/json"
-	"fmt"
 )
 
-func MuxHandler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/ingredients/", func(w http.ResponseWriter, req *http.Request) {
-		
-		p := []Ingredient{}
-		p = append(p,Ingredient{
-			ID: 1,
-			Name:"paprika",
-		})
-		
-		w.Header().Set("Content-Type","application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(p)
-		
-	})
-	mux.HandleFunc("/recipes/", func(w http.ResponseWriter, req *http.Request) {
-		p := []Recipe{}
-		p = append(p, Recipe{
-			ID: 1,
-			Name: "Spicy Curry",
-			Ingredients:  []Ingredient{
-				Ingredient{
-				ID: 1,
-				Name: "Paprika",
-			},
-		}})
-		
-		w.Header().Set("Content-Type","application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(p)
+// TODO: Configure DB storage to set up POST, PUT/PATCH?, and DELETE METHODS
 
-	})
-	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path != "/" {
-			http.NotFound(w, req)
-			return
-		}
-		fmt.Fprintf(w, "Welcome To The Home Page!")
-	})
+func ApiRouteHandler() *http.ServeMux {
+	router := NewRouter()
 
-	return mux
+	router.Handle("/ingredients/", IngredientsRouteHandler{})
+	router.Handle("/recipes/", RecipesRouteHandler{})
+
+	return router
 }
+
+func NewRouter() *http.ServeMux {
+	router := http.NewServeMux()
+	return router
+}
+
+type IngredientsRouteHandler struct {}
+
+func (IngredientsRouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)  {
+	if r.Method == "GET" {
+		p := []Ingredient{
+			Ingredient{
+				ID: 1,
+				Name: "Spice",
+			},
+		}
+		w.Header().Set("Content-Type","application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(p)
+	}
+}
+
+type RecipesRouteHandler struct {}
+
+func (RecipesRouteHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		p := []Recipe{
+			Recipe{
+				ID: 1,
+				Name: "Spicy Stew",
+				Ingredients: []Ingredient{
+					Ingredient{
+						ID: 1,
+						Name: "Spice",
+					},
+					Ingredient{
+						ID: 2,
+						Name: "Broth",
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type","application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(p)
+	} 
+}
+

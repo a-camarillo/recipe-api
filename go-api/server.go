@@ -7,7 +7,7 @@ import (
 )
 
 func RunServer() {
-	handler := MuxHandler()
+	handler := ApiRouteHandler()
 	s := http.Server{
 		Addr: ":3000",
 		Handler: handler,
