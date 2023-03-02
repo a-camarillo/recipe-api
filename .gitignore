@@ -13,3 +13,18 @@ media
 !.vscode/launch.json 
 !.vscode/extensions.json 
 .history
+
+# Go #
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*/bin/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Go workspace file
+go.work
