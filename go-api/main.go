@@ -1,7 +1,17 @@
 package main
 
-// import "fmt"
+import (
+	"log"
+)
 
 func main() {
-	RunServer()
+	store, err := NewPostgresStore()
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := store.Init(); err != nil {
+		log.Fatal(err)
+	}
+	server := NewServer(":3000", *store)
+	server.Run()
 }
