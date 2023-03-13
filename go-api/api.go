@@ -107,7 +107,7 @@ func (s *Server) RecipesHandler(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (s* Server) handleReadRecipes(w http.ResponseWriter, r *http.Request) error {
+func (s *Server) handleReadRecipes(w http.ResponseWriter, r *http.Request) error {
 	p, err := s.Store.readRecipes()
 	if err != nil {
 		return err
@@ -115,7 +115,7 @@ func (s* Server) handleReadRecipes(w http.ResponseWriter, r *http.Request) error
 	return EncodeJSON(w, http.StatusOK, p)
 }
 
-func (s* Server) handleReadRecipe(w http.ResponseWriter, r *http.Request) error {
+func (s *Server) handleReadRecipe(w http.ResponseWriter, r *http.Request) error {
 	id := strings.TrimPrefix(r.URL.Path, "/recipes/")
 	p, err := s.Store.readRecipe(id)
 	if err != nil {
@@ -124,13 +124,13 @@ func (s* Server) handleReadRecipe(w http.ResponseWriter, r *http.Request) error 
 	return EncodeJSON(w, http.StatusOK, p)
 }
 
-func (s* Server) handleCreateRecipe(w http.ResponseWriter, r *http.Request) error {
+func (s *Server) handleCreateRecipe(w http.ResponseWriter, r *http.Request) error {
 	createRecipe := CreateRecipe{}
 	if err := json.NewDecoder(r.Body).Decode(&createRecipe); err != nil {
 		return err
 	}
 
-	recipe := NewRecipe(createRecipe.Name)
+	recipe := NewCreateRecipe(createRecipe.Name, createRecipe.Ingredients)
 	if err := s.Store.createRecipe(recipe); err != nil {
 		return err
 	}
@@ -188,6 +188,7 @@ func (s *Server) handleReadIngredient(w http.ResponseWriter, r *http.Request) er
 	}
 	return EncodeJSON(w, http.StatusOK, p)
 }
+
 func (s *Server) handleDeleteIngredient(w http.ResponseWriter, r *http.Request) error {
 	path := r.URL.Path
 	id := strings.TrimPrefix(path, "/ingredients/")

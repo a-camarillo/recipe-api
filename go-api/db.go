@@ -20,43 +20,114 @@ func (s *PostgresStore) Init() error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func (s *PostgresStore) createRecipesTable() error {
-	query := `create table if not exists recipes (
-		id serial primary key,
-		name varchar
-	)`
-	_, err := s.db.Exec(query)
-	return err
-}
-
-func (s *PostgresStore) createRecipe(rec *Recipe) error {
-	query := `insert into recipes (name) 
-		values ($1);`
-	_, err := s.db.Query(query, rec.Name)
+	err = s.createRecipesIngredientsTable()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *PostgresStore) readRecipe(i string) (*Recipe, error) {
-	p := Recipe{}
-	query := `select id, name from recipes where id = $1;`
-	row := s.db.QueryRow(query, i)
+func (s *PostgresStore) createRecipesIngredientsTable() error {
+	query := `create table if not exists recipes_ingredients (
+		id serial primary key,
+		recipe_id int references recipes(id) on delete cascade,
+		recipe_name varchar,
+		ingredient_id int references ingredients(id) on delete cascade,
+		ingredient_name varchar,
+		unique (recipe_name,ingredient_name)
+		)`
+	_, err := s.db.Exec(query)
+	return err
+}
+func (s *PostgresStore) createRecipesTable() error {
+	query := `create table if not exists recipes (
+		id serial primary key,
+		name varchar unique
+	)`
+	_, err := s.db.Exec(query)
+	return err
+}
+
+func (s *PostgresStore) createRecipe(rec *CreateRecipe) error {
+	query := `insert into recipes (name) 
+		values ($1)
+		on conflict do nothing;`
+	_, err := s.db.Query(query, rec.Name)
+	if err != nil {
+		return err
+	}
 	var (
-		id   int
-		name string
+		recID   int
+		recName string
 	)
-	if err := row.Scan(&id, &name); err != nil {
+	selectRecipeRow := `select id, name from recipes where name = $1`
+	recipeRow := s.db.QueryRow(selectRecipeRow, rec.Name)
+	if err = recipeRow.Scan(&recID, &recName); err != nil {
+		return err
+	}
+	for _, ing := range rec.Ingredients {
+		query = `insert into ingredients (name)
+				  values ($1)
+				  on conflict do nothing;`
+		_, err = s.db.Query(query, ing.Name)
+		if err != nil {
+			return err
+		}
+		var (
+			ingID   int
+			ingName string
+		)
+		selectIngredientRow := `select id, name from ingredients where name = $1`
+		ingredientRow := s.db.QueryRow(selectIngredientRow, ing.Name)
+		if err = ingredientRow.Scan(&ingID, &ingName); err != nil {
+			return err
+		}
+		insertRecipesIngredients := `insert into recipes_ingredients (recipe_id, recipe_name, ingredient_id, ingredient_name)
+									values ($1, $2, $3, $4)
+									on conflict do nothing`
+		_, err = s.db.Query(insertRecipesIngredients, recID, recName, ingID, ingName)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *PostgresStore) readRecipe(i string) (*Recipe, error) {
+	ingredients := []Ingredient{}
+	selectRecipeRow := `select id, name from recipes where id = $1;`
+	recipeRow := s.db.QueryRow(selectRecipeRow, i)
+	var (
+		recID   int
+		recName string
+	)
+	if err := recipeRow.Scan(&recID, &recName); err != nil {
 		return nil, err
 	}
-	p = Recipe{
-		ID:   id,
-		Name: name,
+	selectRecipeIngredients := `select ingredient_id, ingredient_name from recipes_ingredients where recipe_id = $1`
+	recipeIngredients, err := s.db.Query(selectRecipeIngredients, i)
+	if err != nil {
+		return nil, err
 	}
+	var (
+		ingID   int
+		ingName string
+	)
+	defer recipeIngredients.Close()
+	for recipeIngredients.Next() {
+		recipeIngredients.Scan(&ingID, &ingName)
+		ingredients = append(ingredients, Ingredient{
+			ID:   ingID,
+			Name: ingName,
+		})
+	}
+	p := Recipe{
+		ID:          recID,
+		Name:        recName,
+		Ingredients: ingredients,
+	}
+
 	return &p, nil
 }
 
@@ -105,7 +176,7 @@ func (s *PostgresStore) deleteRecipe(id string) (*DeleteRecipe, error) {
 func (s *PostgresStore) createIngredientsTable() error {
 	query := `CREATE TABLE IF NOT EXISTS ingredients (
 		id serial primary key,
-		name varchar
+		name varchar unique
 		)`
 	_, err := s.db.Exec(query)
 	return err

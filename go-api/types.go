@@ -1,7 +1,8 @@
 package main
 
 type CreateRecipe struct {
-	Name string `json:"name"`
+	Name        string             `json:"name"`
+	Ingredients []CreateIngredient `json:"ingredients"`
 }
 
 type DeleteRecipe struct {
@@ -26,7 +27,14 @@ type Ingredient struct {
 type Recipe struct {
 	ID          int          `json:"id"`
 	Name        string       `json:"name"`
-	//Ingredients []Ingredient `json:"ingredients"`
+	Ingredients []Ingredient `json:"ingredients"`
+}
+
+func NewCreateRecipe(name string, ingredients []CreateIngredient) *CreateRecipe {
+	return &CreateRecipe{
+		Name:        name,
+		Ingredients: ingredients,
+	}
 }
 
 func NewRecipe(name string) *Recipe {
