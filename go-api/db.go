@@ -133,24 +133,42 @@ func (s *PostgresStore) readRecipe(i string) (*Recipe, error) {
 
 func (s *PostgresStore) readRecipes() ([]Recipe, error) {
 	p := []Recipe{}
-	query := `select id, name from recipes`
-	rows, err := s.db.Query(query)
+	recipeQuery := `select id, name from recipes`
+	recipeRows, err := s.db.Query(recipeQuery)
 	if err != nil {
 		return nil, err
 	}
-
-	defer rows.Close()
-	for rows.Next() {
+	defer recipeRows.Close()
+	for recipeRows.Next() {
 		var (
-			id   int
-			name string
+			recID        int
+			recName      string
+			tempIngSlice []Ingredient
+			ingID        int
+			ingName      string
 		)
-		if err := rows.Scan(&id, &name); err != nil {
-			log.Fatal(err)
+		if err := recipeRows.Scan(&recID, &recName); err != nil {
+			return nil, err
+		}
+		secondQuery := `select ingredient_id, ingredient_name from recipes_ingredients where recipe_id = $1`
+		ingredientRows, err := s.db.Query(secondQuery, recID)
+		if err != nil {
+			return nil, err
+		}
+		defer ingredientRows.Close()
+		for ingredientRows.Next() {
+			if err := ingredientRows.Scan(&ingID, &ingName); err != nil {
+				return nil, err
+			}
+			tempIngSlice = append(tempIngSlice, Ingredient{
+				ID:   ingID,
+				Name: ingName,
+			})
 		}
 		p = append(p, Recipe{
-			ID:   id,
-			Name: name,
+			ID:          recID,
+			Name:        recName,
+			Ingredients: tempIngSlice,
 		})
 	}
 	return p, nil
